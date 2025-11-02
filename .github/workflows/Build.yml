@@ -14,21 +14,30 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+    -  name: checkout code
+    -  uses: actions/checkout@v4
+      
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        role-to-assume: arn:aws:iam::123456789012:role/push-to-ecr
+        aws-region: us-west-2
+        
+    - name: Create ECR repository if it doesn't exist
+      run: |
+        aws ecr describe-repositories --repository-names mentorship-wk2 --region us-weast-2 || \
+        aws ecr create-repository --repository-name mentorship-wk2 --region us-west-2
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
     - name: Build the Docker image
       run: docker build . --file Dockerfile --tag myflaskrun:$(date +%s)
-
-
-
-     - run: docker build --tag my-image:v1 .
-- name: Configure AWS Credentials
-  uses: aws-actions/configure-aws-credentials@v2
-  with:
-    role-to-assume: arn:aws:iam::123456789012:role/push-to-ecr
-    aws-region: us-west-2
-- name: Push to ECR
-  id: ecr
-  uses: jwalton/gh-ecr-push@v2
-  with:
-    region: us-east-1
-    image: my-image:v1
+    
+    - name: Push to ECR
+      id: ecr
+      uses: jwalton/gh-ecr-push@v2
+      with:
+        region: us-west-2
+        image: mentorship-wk2:${{ github.sha }}
