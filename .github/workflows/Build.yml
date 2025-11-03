@@ -11,6 +11,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    permissions:
+      id-token: write   
+      contents: read    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -33,7 +37,7 @@ jobs:
     - name: Build, Tag, and Push Docker image
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        IMAGE_REPO_NAME: myflaskrun
+        IMAGE_REPO_NAME: mentorship-wk2   
         IMAGE_TAG: ${{ github.sha }}
       run: |
         docker build -t $IMAGE_REPO_NAME:$IMAGE_TAG .
