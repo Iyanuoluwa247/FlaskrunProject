@@ -12,7 +12,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Step 2: SSH to EC2 and deploy container
+      # Step 2: SSH into EC2 and deploy container
       - name: SSH into EC2 and deploy container
         uses: appleboy/ssh-action@v0.1.10
         with:
@@ -21,29 +21,29 @@ jobs:
           key: ${{ secrets.SSH }}
           debug: true
           script: |
-            set -e  # Exit on error
+            set -e  # Exit immediately on error
             echo "Updating system packages..."
             sudo apt update -y
             sudo apt install -y docker.io awscli
             sudo systemctl start docker
             sudo systemctl enable docker
 
-            echo "Connected successfully! Current containers:"
+            echo "Connected successfully!"
             docker ps || true
 
-            # Use IAM role on EC2, no AWS secrets needed
-            echo "Logging in to ECR using instance role..."
+            # Authenticate with ECR using the instance's IAM role
+            echo "Logging into ECR using EC2 IAM role..."
             aws ecr get-login-password --region us-west-2 | sudo docker login --username AWS --password-stdin 429128461930.dkr.ecr.us-west-2.amazonaws.com
 
-            echo "Stopping old container (if exists)..."
+            echo "Stopping old container if it exists..."
             sudo docker stop myflaskrun || true
             sudo docker rm myflaskrun || true
 
-            echo "Pulling latest Docker image..."
+            echo "Pulling latest Docker image from ECR..."
             sudo docker pull 429128461930.dkr.ecr.us-west-2.amazonaws.com/myflaskrun:${{ github.sha }}
 
-            echo "Running container..."
+            echo "Starting new container..."
             sudo docker run -d -p 5000:5000 --name myflaskrun 429128461930.dkr.ecr.us-west-2.amazonaws.com/myflaskrun:${{ github.sha }}
 
-            echo "Deployment successful! Current containers:"
+            echo "Deployment successful! Running containers:"
             docker ps
