@@ -30,6 +30,8 @@ jobs:
           sudo apt install -y docker.io
           sudo systemctl start docker
           sudo systemctl enable docker
+          echo "Connected successfully!"
+          docker ps
 
           aws ecr get-login-password --region us-west-2 | sudo docker login --username AWS --password-stdin 429128461930.dkr.ecr.us-west-2.amazonaws.com
           sudo docker pull 429128461930.dkr.ecr.us-west-2.amazonaws.com/myflaskrun:${{ github.sha }}
