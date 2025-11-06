@@ -19,28 +19,38 @@ jobs:
         key: ${{ secrets.SSH }}
         debug: true
         script: |
-          set -e  # Exit immediately on error
-          echo "Updating system packages..."
+          set -e  # Exit on error
+
+          echo "Updating packages..."
           sudo apt update -y
           sudo apt install -y docker.io awscli
           sudo systemctl start docker
           sudo systemctl enable docker
-          echo "Connected successfully!"
+
+          echo "Connected to EC2"
           docker ps || true
 
-          # Authenticate with ECR using the instance's IAM role
           echo "Logging into ECR using EC2 IAM role..."
           aws ecr get-login-password --region us-west-2 | sudo docker login --username AWS --password-stdin 429128461930.dkr.ecr.us-west-2.amazonaws.com
 
-          echo "Stopping old container if it exists..."
+          echo "Fetching latest image tag from ECR..."
+          LATEST_TAG=$(aws ecr describe-images \
+            --repository-name mentorship-wk2 \
+            --region us-west-2 \
+            --query 'sort_by(imageDetails,& imagePushedAt)[-1].imageTags[0]' \
+            --output text)
+
+          echo "Latest image tag: $LATEST_TAG"
+
+          echo "Stopping any existing container..."
           sudo docker stop mentorship-wk2 || true
           sudo docker rm mentorship-wk2 || true
 
-          echo "Pulling latest Docker image from ECR..."
-          sudo docker pull 429128461930.dkr.ecr.us-west-2.amazonaws.com/mentorship-wk2:${{ github.sha }}
+          echo "Pulling latest Docker image..."
+          sudo docker pull 429128461930.dkr.ecr.us-west-2.amazonaws.com/mentorship-wk2:$LATEST_TAG
 
-          echo "Starting new container..."
-          sudo docker run -d -p 5000:5000 --name mentorship-wk2 429128461930.dkr.ecr.us-west-2.amazonaws.com/mentorship-wk2:${{ github.sha }}
+          echo "Starting container..."
+          sudo docker run -d -p 5000:5000 --name mentorship-wk2 429128461930.dkr.ecr.us-west-2.amazonaws.com/mentorship-wk2:$LATEST_TAG
 
           echo "Deployment successful! Running containers:"
           docker ps
